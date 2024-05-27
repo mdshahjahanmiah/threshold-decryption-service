@@ -19,12 +19,13 @@ type Decrypt struct {
 
 type Service interface {
 	PartialDecryption(ciphertext string, share string) (*pbc.Element, error)
+	PairingParams() *pbc.Pairing
 }
 
 type decryptionService struct {
 	config  config.Config
 	logger  *logging.Logger
-	pairing *pbc.Pairing
+	Pairing *pbc.Pairing
 }
 
 // NewDecryptionService creates a new decryption service with the given configuration and logger.
@@ -35,7 +36,7 @@ func NewDecryptionService(config config.Config, logger *logging.Logger) (Service
 		return nil, err
 	}
 
-	params, err := decodePairingParams(encodedParams)
+	params, err := DecodePairingParams(encodedParams)
 	if err != nil {
 		logger.Error("failed to decode pairing parameters", "error", err)
 		return nil, err
@@ -50,7 +51,7 @@ func NewDecryptionService(config config.Config, logger *logging.Logger) (Service
 	return &decryptionService{
 		config:  config,
 		logger:  logger,
-		pairing: pairing,
+		Pairing: pairing,
 	}, nil
 }
 
@@ -77,10 +78,15 @@ func (ds *decryptionService) PartialDecryption(ciphertext string, share string) 
 	ds.logger.Debug("share element generated", "element", shareElement.String())
 
 	// Perform the partial decryption
-	part := ds.pairing.NewG1().PowZn(pbcElement, shareElement)
+	part := ds.Pairing.NewG1().PowZn(pbcElement, shareElement)
 	ds.logger.Debug("partial decryption result", "result", part.String())
 
 	return part, nil
+}
+
+// PairingParams returns the pairing parameters used by the decryption service.
+func (ds *decryptionService) PairingParams() *pbc.Pairing {
+	return ds.Pairing
 }
 
 // decodeShare decodes a base64-encoded share and generates a PBC element.
@@ -95,7 +101,7 @@ func (ds *decryptionService) decodeShare(share string) (*pbc.Element, error) {
 	ds.logger.Debug("decoded share bytes", "bytes", shareBytes)
 
 	shareInt := new(big.Int).SetBytes(shareBytes)
-	shareElement := ds.pairing.NewZr().SetBig(shareInt)
+	shareElement := ds.Pairing.NewZr().SetBig(shareInt)
 
 	if shareElement.Is0() {
 		ds.logger.Error("share element is zero after SetBig")
@@ -119,7 +125,7 @@ func (ds *decryptionService) decodeCipherText(ciphertext string) (*pbc.Element, 
 	ds.logger.Debug("decoded ciphertext bytes", "bytes", ciphertextBytes)
 
 	// Create a new G1 element from the decoded ciphertext bytes
-	ciphertextElement := ds.pairing.NewG1().SetBytes(ciphertextBytes)
+	ciphertextElement := ds.Pairing.NewG1().SetBytes(ciphertextBytes)
 
 	if ciphertextElement.Is0() {
 		ds.logger.Error("ciphertext element is zero after SetBytes")
@@ -131,8 +137,8 @@ func (ds *decryptionService) decodeCipherText(ciphertext string) (*pbc.Element, 
 	return ciphertextElement, nil
 }
 
-// decodePairingParams decodes the base64-encoded pairing parameters
-func decodePairingParams(encodedParams string) (*pbc.Params, error) {
+// DecodePairingParams decodes the base64-encoded pairing parameters
+func DecodePairingParams(encodedParams string) (*pbc.Params, error) {
 	paramsBytes, err := base64.StdEncoding.DecodeString(encodedParams)
 	if err != nil {
 		return nil, err
@@ -142,5 +148,6 @@ func decodePairingParams(encodedParams string) (*pbc.Params, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	return params, nil
 }

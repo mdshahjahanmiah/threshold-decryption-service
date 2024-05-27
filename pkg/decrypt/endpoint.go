@@ -2,15 +2,15 @@ package decrypt
 
 import (
 	"context"
+	"encoding/base64"
 	"github.com/go-kit/kit/endpoint"
 	eError "github.com/mdshahjahanmiah/explore-go/error"
 	"github.com/mdshahjahanmiah/explore-go/logging"
 	"net/http"
 )
 
-type DecryptionResult struct {
-	X string `json:"x"`
-	Y string `json:"y"`
+type PartialDecryptResponse struct {
+	PartialDecryption string `json:"partial_decryption"`
 }
 
 func getPartialDecryptEndpoint(logger *logging.Logger, service Service) endpoint.Endpoint {
@@ -24,6 +24,13 @@ func getPartialDecryptEndpoint(logger *logging.Logger, service Service) endpoint
 			logger.Error("partial decryption failed", "err", err)
 			return nil, eError.NewServiceError(err, "provided data could not be decrypted", "decrypt_request", http.StatusUnprocessableEntity)
 		}
-		return DecryptionResult{X: result.X().String(), Y: result.Y().String()}, nil
+
+		// Encode the result as a base64 string
+		partialDecryptionBytes := result.Bytes()
+		encodedPartialDecryption := base64.StdEncoding.EncodeToString(partialDecryptionBytes)
+
+		return PartialDecryptResponse{
+			PartialDecryption: encodedPartialDecryption,
+		}, nil
 	}
 }
