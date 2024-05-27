@@ -18,6 +18,7 @@ type Decrypt struct {
 }
 
 type Service interface {
+	GetCiphertext() string
 	PartialDecryption(ciphertext string, share string) (*pbc.Element, error)
 	PairingParams() *pbc.Pairing
 }
@@ -53,6 +54,16 @@ func NewDecryptionService(config config.Config, logger *logging.Logger) (Service
 		logger:  logger,
 		Pairing: pairing,
 	}, nil
+}
+
+// GetCiphertext generates a random ciphertext and returns it as a base64-encoded string.
+func (ds *decryptionService) GetCiphertext() string {
+	// Generate a random G1 element for the ciphertext
+	ciphertextElement := ds.Pairing.NewG1().Rand()
+	ciphertextBytes := ciphertextElement.Bytes()
+	ciphertext := base64.StdEncoding.EncodeToString(ciphertextBytes)
+
+	return ciphertext
 }
 
 // PartialDecryption performs a partial decryption of the given ciphertext using the given share.

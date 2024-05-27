@@ -9,8 +9,29 @@ import (
 	"net/http"
 )
 
+// CiphertextResponse is a response object for the generate ciphertext endpoint.
+type CiphertextResponse struct {
+	Ciphertext string `json:"ciphertext"`
+}
+
+// PartialDecryptResponse is a response object for the partial decryption endpoint.
 type PartialDecryptResponse struct {
 	PartialDecryption string `json:"partial_decryption"`
+}
+
+func getCiphertextEndpoint(logger *logging.Logger, service Service) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (response interface{}, err error) {
+
+		ciphertext := service.GetCiphertext()
+		if ciphertext == "" {
+			logger.Error("fail to generate ciphertext")
+			return nil, eError.NewServiceError(err, "fail to generate ciphertext", "ciphertext", http.StatusInternalServerError)
+		}
+
+		return CiphertextResponse{
+			Ciphertext: ciphertext,
+		}, nil
+	}
 }
 
 func getPartialDecryptEndpoint(logger *logging.Logger, service Service) endpoint.Endpoint {

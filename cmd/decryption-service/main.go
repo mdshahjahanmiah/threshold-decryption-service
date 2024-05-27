@@ -32,12 +32,6 @@ func main() {
 		return logger, nil
 	})
 
-	c.Provide(func(config config.Config) *eHttp.ServerConfig {
-		return &eHttp.ServerConfig{
-			HttpAddress: config.HttpAddress,
-		}
-	})
-
 	c.Provide(func(config config.Config, logger *logging.Logger) (decrypt.Service, error) {
 		service, err := decrypt.NewDecryptionService(config, logger)
 		if err != nil {
@@ -45,6 +39,12 @@ func main() {
 			return nil, err
 		}
 		return service, nil
+	})
+
+	c.Provide(func(config config.Config) *eHttp.ServerConfig {
+		return &eHttp.ServerConfig{
+			HttpAddress: config.HttpAddress,
+		}
 	})
 
 	c.ProvideMonitoringEndpoints("endpoint")

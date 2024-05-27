@@ -13,6 +13,13 @@ func MakeHandler(logger *logging.Logger, service Service) http.Endpoint {
 		kithttp.ServerErrorEncoder(error.EncodeError),
 	}
 
+	handleGetCiphertext := kithttp.NewServer(
+		getCiphertextEndpoint(logger, service),
+		kithttp.NopRequestDecoder,
+		kithttp.EncodeJSONResponse,
+		opts...,
+	)
+
 	handlePartialDecryption := kithttp.NewServer(
 		getPartialDecryptEndpoint(logger, service),
 		decodeDecryptRequest,
@@ -21,6 +28,7 @@ func MakeHandler(logger *logging.Logger, service Service) http.Endpoint {
 	)
 
 	r := chi.NewRouter()
+	r.Method("GET", "/ciphertext", handleGetCiphertext)
 	r.Method("POST", "/partial-decrypt", handlePartialDecryption)
 
 	return http.Endpoint{Pattern: "/*", Handler: r}
